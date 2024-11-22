@@ -5,10 +5,10 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from src.config import Config
 
 SQLALCHEMY_DATABASE_URL = (
-        f"postgresql+asyncpg://{Config.POSTGRES_USER}:"
-        f"{Config.POSTGRES_PASSWORD}@db:"
-        f"{Config.POSTGRES_PORT}/{Config.POSTGRES_DB}"
-    )
+    f"postgresql+asyncpg://{Config.POSTGRES_USER}:"
+    f"{Config.POSTGRES_PASSWORD}@{Config.POSTGRES_DB}:"
+    f"{Config.POSTGRES_PORT}/{Config.POSTGRES_DB_NAME}"
+)
 
 async_engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
 
