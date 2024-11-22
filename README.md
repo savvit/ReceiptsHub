@@ -13,6 +13,8 @@
 
 `POSTGRES_DB=db`
 
+`POSTGRES_DB_NAME=db`
+
 `POSTGRES_PORT=<your_db_port>`
 
 `POSTGRES_USER=<your_db_user>`
