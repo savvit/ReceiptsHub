@@ -12,11 +12,12 @@ from src.checks.schemas import (
     CheckFilterParams
 )
 from src.checks.service import (
-    get_filtered_checks_query, get_check_by_id_from_db
+    get_filtered_checks_query, get_check_by_id_from_db, fetch_check_data
 )
 from src.checks.utils import (
     add_products_to_check, calculate_totals, create_check_record,
-    fetch_check_with_products, apply_filters
+    fetch_check_with_products, apply_filters, format_footer, format_summary,
+    format_products, format_header
 )
 from src.database import get_db
 from src.auth.dependencies import get_current_user
@@ -187,72 +188,29 @@ async def get_check_by_id(
     )
 
 
-@router.get("/{check_id}/text", response_model=str)
+@router.get("/{check_id}/text", response_class=PlainTextResponse)
 async def get_check_text(
         check_id: int,
         session: AsyncSession = Depends(get_db),
-        fop_width: int = 10,
-        qty_width: int = 6,
-        price_width: int = 12,
-        name_width: int = 20,
-        total_width: int = 12,
-        sum_width: int = 20,
-        payment_width: int = 15,
-        date_width: int = 20
+        line_width: int = 40
 ):
     """
-    Generates a formatted text representation of a check.
-
-    This endpoint retrieves a check by its ID, including its user and products,
-    and returns a formatted string with the check details. The text includes:
-    - The FOP (Full Name) of the user.
-    - A list of products with their quantity, price, and total.
-    - The total amount, payment amount, and remaining amount.
-    - The creation date of the check.
-    The width of the columns in the text can be customized using the provided query parameters.
+    Generates a text-based receipt with the structure shown in the image.
+    The product name is aligned to the left, while the quantity, price, and total are aligned to the right.
 
     Args:
-        check_id (int): The ID of the check to retrieve.
-        session (AsyncSession): The database session used to query the check and related data.
-        fop_width (int): The width for the FOP (user's full name) column. Default is 10.
-        qty_width (int): The width for the quantity column. Default is 6.
-        price_width (int): The width for the price column. Default is 12.
-        name_width (int): The width for the product name column. Default is 20.
-        total_width (int): The width for the total column. Default is 12.
-        sum_width (int): The width for the sum column. Default is 20.
-        payment_width (int): The width for the payment column. Default is 15.
-        date_width (int): The width for the date column. Default is 20.
+        check_id (int): The ID of the receipt.
+        session (AsyncSession): The database session used to retrieve data.
+        line_width (int): The total width of the line. Default is 40.
     """
 
-    result = await session.execute(
-        select(Check)
-        .options(selectinload(Check.products), selectinload(
-            Check.user))
-        .where(Check.id == check_id)
-    )
-    check = result.scalars().first()
+    check = await fetch_check_data(check_id, session)
 
-    if not check:
-        raise HTTPException(status_code=404, detail="Check not found")
-
-    check_text = f"{'ФОП':>{fop_width}} {check.user.full_name}\n"
-    check_text += "=" * (fop_width + len(
-        check.user.full_name) + 1) + "\n"
-
-    for product in check.products:
-        check_text += f"{product.quantity:>{qty_width}.2f} x {product.price:>{price_width},.2f}\n"
-        check_text += f"{product.name:<{name_width}} {product.total:>{total_width},.2f}\n"
-
-    check_text += "-" * (fop_width + len(
-        check.user.full_name) + 1) + "\n"
-
-    check_text += f"{'СУМА':<{sum_width}} {check.total:>{total_width},.2f}\n"
-    check_text += f"{'Картка':<{payment_width}} {check.payment_amount:>{total_width},.2f}\n"
-    check_text += f"{'Решта':<{payment_width}} {check.rest:>{total_width},.2f}\n"
-    check_text += "=" * (fop_width + len(
-        check.user.full_name) + 1) + "\n"
-
-    check_text += f"{check.created_at.strftime('%d.%m.%Y %H:%M'):<{date_width}}\n"
-    check_text += "Дякуємо за покупку!"
+    check_text = format_header(check.user.full_name, line_width)
+    check_text += format_products(check.products, line_width)
+    check_text += "-" * line_width + "\n"
+    check_text += format_summary(check, line_width)
+    check_text += "=" * line_width + "\n"
+    check_text += format_footer(check.created_at, line_width)
 
     return PlainTextResponse(content=check_text)

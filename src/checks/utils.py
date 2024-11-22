@@ -147,3 +147,87 @@ def apply_filters(filters: CheckFilterParams, user_id: int):
     query_filters.append(Check.user_id == user_id)
 
     return query_filters
+
+
+def format_header(user_full_name: str, line_width: int) -> str:
+    """
+    Formats the header with the FOP (user's full name) centered.
+
+    Args:
+        user_full_name (str): The full name of the user.
+        line_width (int): The total width of the line.
+
+    Returns:
+        str: The formatted header.
+    """
+
+    header = f"ФОП {user_full_name}"
+
+    return f"{header:^{line_width}}\n" + "=" * line_width + "\n"
+
+
+def format_products(products, line_width: int) -> str:
+    """
+    Formats the list of products with their details.
+
+    Args:
+        products (list): The list of products to format.
+        line_width (int): The total width of the line.
+
+    Returns:
+        str: The formatted string for all products.
+    """
+
+    sum_label_width = line_width // 2
+    sum_value_width = line_width - sum_label_width
+    product_lines = ""
+
+    for product in products:
+        product_lines += (
+            f"{product.name:<{sum_label_width}}"
+            f"{f'{product.quantity:.2f} x {product.price:,.2f}':>{sum_value_width}}\n"
+        )
+        product_lines += f"{'':<{sum_label_width}}{product.total:>{sum_value_width},.2f}\n"
+
+    return product_lines
+
+
+def format_summary(check, line_width: int) -> str:
+    """
+    Formats the summary section, including total, payment amount, and remaining amount.
+
+    Args:
+        check: The check object containing summary details.
+        line_width (int): The total width of the line.
+
+    Returns:
+        str: The formatted summary section.
+    """
+
+    sum_label_width = line_width // 2
+    sum_value_width = line_width - sum_label_width
+
+    summary = ""
+    summary += f"{'СУМА':<{sum_label_width}}{check.total:>{sum_value_width},.2f}\n"
+    summary += f"{'Картка':<{sum_label_width}}{check.payment_amount:>{sum_value_width},.2f}\n"
+    summary += f"{'Решта':<{sum_label_width}}{check.rest:>{sum_value_width},.2f}\n"
+
+    return summary
+
+
+def format_footer(created_at, line_width: int) -> str:
+    """
+    Formats the footer section with the creation date and thank-you message.
+
+    Args:
+        created_at (datetime): The creation date of the receipt.
+        line_width (int): The total width of the line.
+
+    Returns:
+        str: The formatted footer.
+    """
+
+    footer = f"{created_at.strftime('%d.%m.%Y %H:%M'):^{line_width}}\n"
+    footer += "Дякуємо за покупку!".center(line_width)
+
+    return footer

@@ -1,3 +1,5 @@
+from http.client import HTTPException
+
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,3 +72,30 @@ async def get_check_by_id_from_db(
     )
 
     return result.scalars().first()
+
+
+async def fetch_check_data(check_id: int, session: AsyncSession):
+    """
+    Fetches the check data from the database by ID, including associated user and products.
+
+    Args:
+        check_id (int): The ID of the receipt.
+        session (AsyncSession): The database session used to retrieve data.
+
+    Returns:
+        Check: The retrieved check data.
+
+    Raises:
+        HTTPException: If no check is found with the provided ID.
+    """
+
+    result = await session.execute(
+        select(Check).options(selectinload(Check.products), selectinload(Check.user))
+        .where(Check.id == check_id)
+    )
+    check = result.scalars().first()
+
+    if not check:
+        raise HTTPException(status_code=404, detail="Check not found")
+
+    return check
